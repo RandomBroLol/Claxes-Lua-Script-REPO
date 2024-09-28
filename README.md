@@ -122,24 +122,40 @@ end
 ```
 ## Developer Title  (Modified to display the Developer Text)
 ```lua
-local developers = {"Roblox", "RandomBroLol"} -- Put usernames in here (I dont have an roblox account  named RandomBroLol so the name "RandomBroLol" is some random guy);
+local developers = {"Roblox", "RandomUsername1"} -- Put usernames in here
 
 game:GetService("Players").PlayerAdded:Connect(function(player)
 	local valid = false
-	for _, v in ipairs(developers) do
-		if string.lower(v) == string.lower(player.Name) then 
-			valid = true 
+	for _, dev in ipairs(developers) do
+		if string.lower(dev) == string.lower(player.Name) then
+			valid = true
+			break -- No need to keep checking once a match is found
 		end
 	end
 	if not valid then return end
 
 	player.CharacterAdded:Connect(function(character)
-		local billboard = script:FindFirstChildOfClass("BillboardGui"):Clone()
-		billboard.Parent = character:WaitForChild("Head")
-		
-		local textLabel = billboard:FindFirstChildOfClass("TextLabel")
-		if textLabel then
-			textLabel.Text = "Developer" -- you can change the text here
+		local head = character:WaitForChild("Head", 5) -- Timeout to avoid indefinite waiting
+		if head then
+			-- Create a new BillboardGui
+			local billboard = Instance.new("BillboardGui")
+			billboard.Name = "DeveloperTag"
+			billboard.Size = UDim2.new(0, 100, 0, 50) -- Adjust size as needed
+			billboard.StudsOffset = Vector3.new(0, 2, 0) -- Position above the head
+			billboard.AlwaysOnTop = true -- Ensures it renders on top of other 3D elements
+			billboard.Parent = head
+
+			-- Create a new TextLabel inside the BillboardGui
+			local textLabel = Instance.new("TextLabel")
+			textLabel.Size = UDim2.new(1, 0, 1, 0) -- Takes up the full size of the BillboardGui
+			textLabel.BackgroundTransparency = 1 -- Makes background transparent
+			textLabel.Text = "Developer" -- Customize this text
+			textLabel.TextColor3 = Color3.new(1, 1, 1) -- White text
+			textLabel.TextScaled = true -- Automatically scales the text to fit the label
+			textLabel.Font = Enum.Font.SourceSansBold -- Customize font
+			textLabel.Parent = billboard
+		else
+			warn("Head not found for " .. player.Name)
 		end
 	end)
 end)
