@@ -16,18 +16,50 @@ game:GetService("Players").PlayerAdded:Connect(function(player)
 end)
 ```
 
-## Badge Door
+## Badge Door (Modified to work)
 ```lua
-local badge_id = 0 -- replace 0 with your badge id
-script.Parent.Touched:Connect(function(hit)
-	local player = game:GetService("Players"):GetPlayerFromCharacter(hit.Parent)
-	if not player then return end
-	if not game:GetService("BadgeService"):UserHasBadgeAsync(player.UserId, badge_id) then
-		local s, r = pcall(function()
-			hit.Parent:WaitForChild("Humanoid").Health = 0
-		end)
-	end
-end)
+local BadgeService = game:GetService("BadgeService")
+local door = script.Parent  -- The door part
+local badgeId = 12345678  -- Replace with your Badge ID
+
+-- Function to check if a player has the badge
+local function playerHasBadge(player)
+    local success, hasBadge = pcall(function()
+        return BadgeService:UserHasBadgeAsync(player.UserId, badgeId)
+    end)
+
+    if success then
+        return hasBadge
+    else
+        warn("Could not check badge: ", hasBadge)
+        return false
+    end
+end
+
+-- Function to handle when a player touches the door
+local function onTouched(hit)
+    local player = game.Players:GetPlayerFromCharacter(hit.Parent)
+    
+    if player then
+        if playerHasBadge(player) then
+            -- Open the door (transparency and can collide off)
+            door.Transparency = 0.5
+            door.CanCollide = false
+            wait(3)  -- Keep door open for 3 seconds
+            door.Transparency = 0
+            door.CanCollide = true
+        else
+            -- Player doesn't have the badge, so kill them
+            local character = player.Character
+            if character and character:FindFirstChild("Humanoid") then
+                character.Humanoid.Health = 0  -- Kills the player
+            end
+        end
+    end
+end
+
+-- Connect the touched event to the function
+door.Touched:Connect(onTouched)
 ```
 
 ## Basic Radgoll After Death
@@ -168,18 +200,35 @@ game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
 ```lua
 game:GetService("Players").LocalPlayer.CameraMode = Enum.CameraMode.LockFirstPerson
 ```
-## Gamepass Door
+## Gamepass Door (Modified)
 ```lua
-local gamepass_id = 0
-script.Parent.Touched:Connect(function(hit)
-local player = game:GetService("Players"):GetPlayerFromCharacter(hit.Parent)
-if not player then return end
-if not game:GetService("MarketplaceService"):UserOwnsGamePassAsync(player.UserId, gamepass_id) then
-local s, r = pcall(function()
-hit.Parent:WaitForChild("Humanoid").Health = 0
-end)
+local door = script.Parent
+local playerService = game:GetService("Players")
+local doorId = 123456789 -- Replace with your Game Pass ID
+
+-- Function to check if the player owns the game pass
+local function playerHasGamePass(player)
+    local success, result = pcall(function()
+        return player:HasPass(doorId)
+    end)
+    return success and result
 end
-end)
+
+-- Function to handle player touch
+local function onTouch(other)
+    local player = playerService:GetPlayerFromCharacter(other.Parent)
+    if player and playerHasGamePass(player) then
+        door.Transparency = 0.5 -- Makes the door transparent
+        door.CanCollide = false   -- Allows players to pass through
+        wait(3) -- Time the door stays open
+        door.Transparency = 0 -- Resets transparency
+        door.CanCollide = true  -- Restores collision
+    else
+        other.Parent:BreakJoints() -- Kills the player if they don't own the Game Pass
+    end
+end
+
+door.Touched:Connect(onTouch)
 ```
 ## Group Team (Puts Players on a team if they are in  a group)
 ```lua
@@ -220,29 +269,52 @@ script.Parent.Touched:Connect(function(hit)
     end
 end)
 ```
-## Landmine (Modified to kill you)
+## Landmine (Modified to Actually be useful)
 ```lua
 local respawnTime = 30 -- How many seconds before spawning again
+local isActive = true -- Flag to track if the landmine is active
+
+script.Parent.Anchored = true -- Ensure the landmine is anchored
+
+-- Create the sound instance
+local sound = Instance.new("Sound")
+sound.SoundId = "rbxassetid://423041300" -- Set the sound asset ID
+sound.Parent = script.Parent -- Parent the sound to the landmine part
 
 script.Parent.Touched:Connect(function(hit)
+	if not isActive then return end -- If not active, do nothing
+
 	-- Check if the object hit is part of a player's character
 	local humanoid = hit.Parent:FindFirstChildOfClass("Humanoid")
 	if humanoid then
 		humanoid.Health = 0 -- Kills the player
+
+		-- Play the sound
+		sound:Play() -- Play the sound when hit
+
+		-- Set the object transparency to 1 and make it non-collidable and non-touchable
+		script.Parent.Transparency = 1
+		script.Parent.CanCollide = false -- Disable collisions
+
+		local explosion = Instance.new("Explosion")
+		explosion.Position = script.Parent.Position
+		explosion.Parent = game.Workspace -- Parent the explosion to Workspace
+		explosion.BlastRadius = 10 -- Set the explosion radius (adjust as needed)
+		explosion.BlastPressure = 5000 -- Set the explosion pressure (adjust as needed)
+		explosion.ExplosionType = Enum.ExplosionType.NoCraters -- Prevent craters if desired
+
+		-- Add the explosion to Debris for cleanup
+		game:GetService("Debris"):AddItem(explosion, 2)
+
+		-- Set the landmine to inactive
+		isActive = false
+
+		-- Wait for respawn time and reset transparency and collision
+		wait(respawnTime)
+		script.Parent.Transparency = 0
+		script.Parent.CanCollide = true -- Enable collisions again
+		isActive = true -- Set the landmine back to active
 	end
-	
-	-- If the object is already transparent, return
-	if script.Parent.Transparency == 1 then return end
-	
-	-- Set the object transparency to 1 and create an explosion
-	script.Parent.Transparency = 1
-	local explosion = Instance.new("Explosion", script.Parent)
-	explosion.Position = script.Parent.Position
-	game:GetService("Debris"):AddItem(explosion, 2)
-	
-	-- Wait for respawn time and reset transparency
-	wait(respawnTime)
-	script.Parent.Transparency = 0
 end)
 ```
 ## Phrase Teleport
