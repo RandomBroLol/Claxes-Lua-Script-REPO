@@ -328,7 +328,7 @@ game:GetService("Players").PlayerAdded:Connect(function(player)
 	end)
 end)
 ```
-/respawn Command
+**/respawn Command**
 ```lua
 game:GetService("Players").PlayerAdded:Connect(function(player)
     player.Chatted:Connect(function(msg)
