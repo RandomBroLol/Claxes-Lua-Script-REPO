@@ -200,35 +200,56 @@ game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
 ```lua
 game:GetService("Players").LocalPlayer.CameraMode = Enum.CameraMode.LockFirstPerson
 ```
-## Gamepass Door (Modified)
+## Gamepass Door (Not my or Purple Luas code)
 ```lua
-local door = script.Parent
-local playerService = game:GetService("Players")
-local doorId = 123456789 -- Replace with your Game Pass ID
+local MS = game:GetService("MarketplaceService")
+local Gamepass = 123456789 -- The ID of the Gamepass. (Your Game Pass ID)
+local OpenTime = 1 -- The time the door is open for (in seconds).
+local OpenTrans = 0.5 -- The transparency of the door when it is open.
+local CloseTrans = 0 -- The transparency of the door when it is closed.
+local BuyGUI = true -- Set to false to stop the BuyGUI appearing.
+local KillOnTouch = true -- Set to false to stop players being killed when they touch it.
+local Whitelist = {
+	12345678, -- Replace with actual UserIDs of players who can open the door without owning the Game Pass
+	1 -- Example: ROBLOX
+}
 
--- Function to check if the player owns the game pass
-local function playerHasGamePass(player)
-    local success, result = pcall(function()
-        return player:HasPass(doorId)
-    end)
-    return success and result
+
+local Door = script.Parent -- The door part
+
+-- Function to check if a player is whitelisted
+function CheckWhitelist(userId)
+	for _, id in ipairs(Whitelist) do
+		if userId == id then
+			return true
+		end
+	end
+	return false
 end
 
--- Function to handle player touch
-local function onTouch(other)
-    local player = playerService:GetPlayerFromCharacter(other.Parent)
-    if player and playerHasGamePass(player) then
-        door.Transparency = 0.5 -- Makes the door transparent
-        door.CanCollide = false   -- Allows players to pass through
-        wait(3) -- Time the door stays open
-        door.Transparency = 0 -- Resets transparency
-        door.CanCollide = true  -- Restores collision
-    else
-        other.Parent:BreakJoints() -- Kills the player if they don't own the Game Pass
-    end
-end
-
-door.Touched:Connect(onTouch)
+-- Handle when the door is touched
+Door.Touched:Connect(function(hit)
+	local player = game.Players:GetPlayerFromCharacter(hit.Parent)
+	if player then
+		if Gamepass <= 0 then return end
+		-- Check if the player owns the Game Pass or is whitelisted
+		if MS:UserOwnsGamePassAsync(player.UserId, Gamepass) or CheckWhitelist(player.UserId) then
+			-- Player has access: open the door
+			Door.CanCollide, Door.Transparency = false, OpenTrans
+			wait(OpenTime)
+			Door.CanCollide, Door.Transparency = true, CloseTrans
+		else
+			-- Player does not have access: show Buy GUI or kill
+			Door.CanCollide, Door.Transparency = true, CloseTrans
+			if BuyGUI then
+				MS:PromptGamePassPurchase(player, Gamepass)
+			end
+			if KillOnTouch then
+				player.Character.Humanoid.Health = 0 -- Kill the player
+			end
+		end
+	end
+end)
 ```
 ## Group Team (Puts Players on a team if they are in  a group)
 ```lua
